@@ -1,0 +1,5 @@
+.env
+.rag
+old-files
+query_hf.py
+__pycache__

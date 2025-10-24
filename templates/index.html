@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Networking Q&A</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="dot"></div>
+      <h1>Networking Q&A Agent</h1>
+      <div class="spacer"></div>
+      <button
+        id="new-chat"
+        class="btn icon"
+        title="New chat"
+        aria-label="New chat"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M12 5v14M5 12h14"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+    </div>
+    <div class="container">
+      <div id="chat" class="chat"></div>
+      <div class="footer">
+        <div class="input-wrap">
+          <input
+            id="prompt"
+            class="prompt"
+            placeholder="Ask about networking or security..."
+          />
+          <button id="send" class="send" title="Send" aria-label="Send">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M3 11l18-8-8 18-2-7-8-3z" fill="currentColor" />
+            </svg>
+          </button>
+        </div>
+        <div id="meta" class="meta"></div>
+      </div>
+    </div>
+    <script src="/static/main.js"></script>
+  </body>
+</html>
