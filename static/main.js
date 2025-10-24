@@ -3,13 +3,26 @@ const chat = document.getElementById("chat")
 const promptEl = document.getElementById("prompt")
 const sendBtn = document.getElementById("send")
 const newChatBtn = document.getElementById("new-chat")
+const exampleBtns = document.querySelectorAll(".example-btn")
+
+// Handle example button clicks
+exampleBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const question = btn.getAttribute("data-question")
+    promptEl.value = question
+    promptEl.focus()
+    sendBtn.click() // Auto-submit
+  })
+})
 
 function appendBubble(role, text) {
   const wrap = document.createElement("div")
   wrap.className = `bubble ${role}`
   const avatar = document.createElement("div")
   avatar.className = "avatar"
-  avatar.textContent = role === "user" ? "You" : "AI"
+  avatar.innerHTML = role === 'user' ?
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" fill="currentColor"/></svg>` :
+    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm6 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-6 6c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm6 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z" fill="currentColor"/></svg>`; 
   const content = document.createElement("div")
   content.className = "content"
   content.textContent = text
@@ -65,16 +78,35 @@ function renderAnswer(resp) {
   }
 }
 
-sendBtn.addEventListener("click", async () => {
+sendBtn.addEventListener('click', async () => {
   const q = promptEl.value.trim()
   if (!q) return
-  appendBubble("user", q)
-  promptEl.value = ""
+  appendBubble('user', q)
+  promptEl.value = ''
+  
+  // Show thinking indicator
+  const thinkingWrap = document.createElement('div')
+  thinkingWrap.className = 'bubble assistant'
+  const thinkingAvatar = document.createElement('div')
+  thinkingAvatar.className = 'avatar'
+  thinkingAvatar.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 12c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm6 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm-6 6c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3zm6 0c1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3 1.34 3 3 3z" fill="currentColor"/></svg>'
+  const thinkingContent = document.createElement('div')
+  thinkingContent.className = 'content thinking'
+  thinkingContent.innerHTML = '<div class="thinking-indicator"><div class="thinking-spinner"></div><span class="thinking-text">Thinking...</span></div>'
+  thinkingWrap.appendChild(thinkingAvatar)
+  thinkingWrap.appendChild(thinkingContent)
+  chat.appendChild(thinkingWrap)
+  chat.scrollTop = chat.scrollHeight
+  
   try {
     const resp = await ask(q)
+    // Remove thinking indicator
+    chat.removeChild(thinkingWrap)
     renderAnswer(resp)
   } catch (e) {
-    appendBubble("assistant", `Error: ${e.message}`)
+    // Remove thinking indicator
+    chat.removeChild(thinkingWrap)
+    appendBubble('assistant', `Error: ${e.message}`)
   }
 })
 

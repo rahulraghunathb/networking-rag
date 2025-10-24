@@ -125,6 +125,48 @@ body {
   padding: 0 16px;
 }
 
+.examples {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.examples h3 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.example-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.example-btn {
+  padding: 8px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: center;
+}
+
+.example-btn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+
+.example-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
 .chat {
   flex: 1;
   padding: 20px;
@@ -279,10 +321,17 @@ button.send {
 button.send:hover {
   background: var(--accent-hover);
   transform: scale(1.05);
+  box-shadow: 0 4px 12px var(--shadow);
 }
 
 button.send:active {
   transform: scale(0.95);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+button.send:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--glow);
 }
 
 .meta {
@@ -317,10 +366,39 @@ button.send:active {
   color: white;
 }
 
-.badge[data-rank="1"] {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
+.bubble .content.thinking {
+  background: var(--assistant-bg);
+  border-color: var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 18px;
+}
+
+.thinking-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thinking-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.thinking-text {
+  color: var(--text);
+  font-size: 14px;
+  font-style: italic;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Responsive */

@@ -1,9 +1,3 @@
-"""FastAPI wrapper for HF (SentenceTransformers) + Chroma retrieval with structured output.
-
-- Uses an existing Chroma DB persisted under ./chroma_db (default) and collection 'networking_context'.
-- Embedding model: sentence-transformers/msmarco-distilbert-base-v4 (must match indexing).
-- No OpenAI dependency. Returns structured JSON with contexts and a simple extractive answer.
-"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -28,7 +22,6 @@ EMBED_MODEL_NAME = "sentence-transformers/msmarco-distilbert-base-v4"
 DEFAULT_TOP_K = 4
 
 
-# ---------- Models ----------
 class AskRequest(BaseModel):
     question: str = Field(..., description="User question to retrieve context for")
     top_k: int = Field(DEFAULT_TOP_K, ge=1, le=20, description="Number of contexts to retrieve")
@@ -49,9 +42,7 @@ class AskResponse(BaseModel):
     citations: List[dict]
 
 
-# ---------- App Init ----------
-app = FastAPI(title="Networking RAG (HF + Chroma)")
-# Serve static assets and the chat UI
+app = FastAPI(title="Networking RAG")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
@@ -87,10 +78,7 @@ def _load_collection() -> chromadb.Collection:
         try:
             _collection = client.get_collection(COLLECTION_NAME)
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to open Chroma collection '{COLLECTION_NAME}' in '{PERSIST_DIR.resolve()}'. "
-                "Ensure the DB exists and names match (see ingest_hf.py)."
-            ) from e
+            raise e
     return _collection
 
 
@@ -100,7 +88,7 @@ def _load_openai_client() -> OpenAI:
         load_dotenv()
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
-            raise RuntimeError("OPENAI_API_KEY not set. Provide it in environment or .env for summarization.")
+            raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set. Provide it in environment or .env for summarization.")
         _openai_client = OpenAI(api_key=api_key)
     return _openai_client
 
@@ -128,13 +116,6 @@ def _fetch_context(query_embedding: List[float], top_k: int) -> List[ContextItem
         text = (doc or "").strip()
         items.append(ContextItem(rank=idx, source=source, page=page, text=text))
     return items
-
-
-def _compose_extractive_answer(contexts: List[ContextItem]) -> str:
-    if not contexts:
-        return "Unable to find relevant information in the knowledge base."
-    # Simple heuristic: return the top context text
-    return contexts[0].text
 
 
 def _summarize_with_openai(question: str, contexts: List[ContextItem]) -> str:
@@ -186,11 +167,10 @@ def ask(payload: AskRequest):
     try:
         q_emb = _embed_query(q)
         contexts = _fetch_context(q_emb, payload.top_k)
-        # Try OpenAI summarization first, fallback to extractive if it fails
         try:
             answer = _summarize_with_openai(q, contexts)
-        except Exception:
-            answer = _compose_extractive_answer(contexts)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
 
         citations = [
             {"index": c.rank, "source": c.source, "page": c.page}

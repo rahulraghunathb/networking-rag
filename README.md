@@ -1,91 +1,122 @@
-# Networking RAG (OpenAI + Chroma)
+# Networking RAG System
 
-Minimal Retrieval-Augmented Generation over local PDFs (network security slides) using:
-- OpenAI embeddings: `text-embedding-3-large`
-- Vector store: ChromaDB (persistent)
-- LLM: `gpt-5-nano`
+Professional Q&A system for networking topics using:
 
-## Prerequisites
-- Python 3.12+ (tested)
-- An OpenAI API key
+- **Retrieval**: HuggingFace SentenceTransformers (msmarco-distilbert-base-v4)
+- **Vector Store**: ChromaDB
+- **Generation**: OpenAI GPT-5 Nano
+- **API**: FastAPI with structured output
+- **UI**: Modern chat interface
 
-## Project Layout
-- `ingest.py` — builds the Chroma index from PDFs under `data/docs/Network_Security_All_slides/`
-- `query.py` — retrieves context and answers with GPT-5 Nano
-- `chroma_store/` — Chroma persistence directory (auto-created)
+## Quick Start
 
-## Setup (Windows PowerShell)
-1) Create and activate a virtual environment
-```
-python -m venv .venv
-.\.venv\Scripts\activate
-python -m pip install --upgrade pip
+1. Activate virtual environment:
+
+```bash
+source .venv/bin/activate  # On Linux/Mac
+# or
+.venv\Scripts\activate  # On Windows
 ```
 
-If you already have a virtual environment named `.rag`, activate it instead:
-```
-.\.rag\Scripts\activate
-```
+2. Install requirements:
 
-2) Install dependencies
-```
-pip install openai chromadb pypdf tiktoken python-dotenv
+```bash
+pip install fastapi uvicorn chromadb sentence-transformers openai python-dotenv pypdf
 ```
 
-3) Configure environment
-- Create a `.env` file in the project root with:
+3. Set OpenAI key in `.env`:
+
 ```
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=your_key
 ```
 
-## Ingestion
-Build the vector index from PDFs.
-- By default, PDFs are read from `data/docs/Network_Security_All_slides`.
-- Embeddings: `text-embedding-3-large` (dimension 3072).
+4. Build the knowledge base (run once or when adding new PDFs):
 
-Optional: In `ingest.py`, set `reset_collection = True` for a clean rebuild. Then run:
+```bash
+python ingest_hf.py
 ```
-python ingest.py
+
+5. Run API (includes web UI):
+
+```bash
+python api_hf.py
 ```
-After a successful run, revert `reset_collection = False` to avoid wiping data on subsequent runs.
 
-## Querying
-Run the simple CLI, then type your question when prompted:
+6. Open UI: http://localhost:8000
+
+## Key Files to Run
+
+- **ingest_hf.py**: Run to build/update the ChromaDB vector store from PDFs
+- **api_hf.py**: Run to start the FastAPI server and serve the web UI
+
+## Dependencies
+
+- FastAPI: Web framework
+- Uvicorn: ASGI server
+- ChromaDB: Vector database
+- SentenceTransformers: HuggingFace embeddings
+- OpenAI: GPT-5 Nano for summarization
+- Python-dotenv: Environment variables
+- PyPDF: PDF processing
+
+## Key Files
+
+- `api_hf.py`: Main API server
+- `ingest_hf.py`: Build ChromaDB from PDFs
+- `static/`: Frontend assets (CSS/JS)
+- `templates/`: HTML UI
+
+## Usage
+
+1. Add PDFs to `data/docs/pdfs`
+2. Build index:
+
+```bash
+python ingest_hf.py
 ```
-python query.py
+
+3. Start API and chat at http://localhost:8000
+
+## System Architecture
+
+```mermaid
+graph TD
+    A[User Query] --> B[API (FastAPI)]
+    B --> C[HF Embeddings]
+    C --> D[ChromaDB Retrieval]
+    D --> E[Context Extraction]
+    E --> F[OpenAI GPT-5 Nano]
+    F --> G[Generate Answer]
+    G --> H[Return Response with Citations]
+    H --> I[Web UI Display]
 ```
-The script:
-- Embeds your query with `text-embedding-3-large`
-- Retrieves top-k chunks from the Chroma collection `networking_slides`
-- Calls `gpt-5-nano` to generate an answer, showing context blocks and sources (PDF name and page)
 
-## Troubleshooting
-- Missing collection error:
-  - Error: `chromadb.errors.NotFoundError: Collection [networking_slides] does not exist`
-  - Fix: Run ingestion first (`python ingest.py`). Ensure `chroma_store/` exists and is not empty.
+### Flow Description
 
-- Embedding dimension mismatch:
-  - Error like: `Collection expecting embedding dimension 3072, got 384`
-  - Cause: Query used a different embedding than ingestion.
-  - Fix: Ensure `query.py` uses OpenAI `text-embedding-3-large` (already configured as `DEFAULT_EMBED_MODEL`). Re-ingest if you previously indexed with a different model.
+1. **User Query**: Input via web UI or API
+2. **HF Embeddings**: Convert query to vector using SentenceTransformers
+3. **ChromaDB Retrieval**: Find top-k similar chunks
+4. **Context Extraction**: Gather relevant text and metadata
+5. **OpenAI GPT-5 Nano**: Summarize context into coherent answer
+6. **Response**: JSON with answer, citations, and sources
+7. **UI Display**: Render in modern chat interface
 
-- PDF parsing warnings:
-  - Some slides contain malformed objects; `ingest.py` uses `PdfReader(..., strict=False)` to suppress non-critical warnings.
-  - If text can’t be selected in the PDF (handwritten or scanned), `pypdf.extract_text()` won’t read it. See OCR below.
+## How We Built It (Step-by-Step)
 
-## OCR for Handwritten/Scanned Slides (Optional)
-`pypdf` reads only digital text. For image-only or handwritten content, add OCR before ingestion, e.g.:
-- Tesseract (local, open-source)
-- Azure Form Recognizer, Google Document AI, AWS Textract (managed)
+1. **Setup Project Structure**
 
-You can preprocess PDFs to text with OCR and then adjust `ingest.py` to load from the OCR outputs (or integrate OCR in the ingestion loop).
+   - Created directories: `data/docs/pdfs`, `static/`, `templates/`
+   - Set up virtual environment and installed dependencies
 
-## Configuration Defaults
-- Collection name: `networking_slides`
-- Chroma persist dir: `chroma_store`
-- Chunking: approx 800 tokens with 200 stride (via `tiktoken`)
-- Top-k: 4
+2. **Data Ingestion (ingest_hf.py)**
 
-## Notes
-- Keep your API key secure; don’t commit `.env`.
-- For large datasets, consider reranking, better chunking strategies, and evaluation tooling as next steps.
+   - Used PyPDF2 to read PDFs from `data/docs/pdfs`
+   - Chunked text into 800-token segments with 200-token stride
+   - Generated embeddings with HuggingFace SentenceTransformers
+   - Stored in ChromaDB collection `networking_context`
+
+3. **API Development (api_hf.py)**
+   - Built FastAPI server with endpoints: `/`, `/health`, `/ask`
+   - Integrated retrieval: Embed query → Search ChromaDB → Get contexts
+   - Added OpenAI summarization for answers
+   - Included CORS for cross-origin requests
