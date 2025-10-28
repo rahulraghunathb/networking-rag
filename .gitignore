@@ -1,5 +1,6 @@
 .env
 .rag
 old-files
-query_hf.py
 __pycache__
+pdfs
+api_hf.py

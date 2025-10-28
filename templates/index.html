@@ -9,8 +9,12 @@
   <body>
     <div class="header">
       <div class="dot"></div>
-      <h1>Networking Q&A Agent</h1>
+      <h1>Networking Agent</h1>
       <div class="spacer"></div>
+      <select id="mode-select" class="mode-select">
+        <option value="qa">Q&A Mode</option>
+        <option value="quiz">Quiz Mode</option>
+      </select>
       <button
         id="new-chat"
         class="btn icon"
@@ -47,7 +51,62 @@
           <button class="example-btn" data-question="What are common vulnerabilities in wireless networks?">Wireless Security</button>
         </div>
       </div>
-      <div id="chat" class="chat"></div>
+      <div id="chat-container" class="chat-container">
+        <div id="chat" class="chat"></div>
+      </div>
+      <div id="quiz-container" class="quiz-container hidden">
+        <div class="quiz-header">
+          <h3>Quiz Mode</h3>
+          <div class="loading-quiz hidden">
+            <div class="spinner"></div>
+            <span>Generating quiz...</span>
+          </div>
+          
+          <!-- Question Generation Type Toggle -->
+          <div class="quiz-section">
+            <label class="quiz-label">Question Generation Type:</label>
+            <div class="toggle-group">
+              <label class="toggle-option">
+                <input type="radio" name="generation-type" value="random" checked />
+                <span>Random Questions</span>
+              </label>
+              <label class="toggle-option">
+                <input type="radio" name="generation-type" value="topic" />
+                <span>Topic-Specific Questions</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Topic Selection (hidden by default) -->
+          <div class="quiz-section" id="topic-section" style="display: none;">
+            <label class="quiz-label" for="quiz-topic">Select Topic:</label>
+            <select id="quiz-topic" class="quiz-select">
+              <option value="">Loading topics...</option>
+            </select>
+          </div>
+
+          <!-- Question Type Selection -->
+          <div class="quiz-section">
+            <label class="quiz-label" for="quiz-type">Question Type:</label>
+            <select id="quiz-type" class="quiz-select">
+              <option value="random">Random (Mixed Types)</option>
+              <option value="multiple_choice">Multiple Choice Only</option>
+              <option value="true_false">True/False Only</option>
+              <option value="open_ended">Open-Ended Only</option>
+            </select>
+          </div>
+
+          <!-- Number of Questions -->
+          <div class="quiz-section">
+            <label class="quiz-label" for="quiz-count">Number of Questions:</label>
+            <input id="quiz-count" class="quiz-input" type="number" min="1" max="10" value="3" />
+          </div>
+
+          <button id="generate-quiz" class="btn">Generate Quiz</button>
+        </div>
+        <div id="quiz-questions" class="quiz-questions"></div>
+        <div id="quiz-feedback" class="quiz-feedback hidden"></div>
+      </div>
       <div class="footer">
         <div class="input-wrap">
           <input
@@ -56,9 +115,10 @@
             placeholder="Ask about networking or security..."
           />
           <button id="send" class="send" title="Send" aria-label="Send">
+            <span>Send</span>
             <svg
-              width="18"
-              height="18"
+              width="16"
+              height="16"
               viewBox="0 0 24 24"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
