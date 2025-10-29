@@ -29,7 +29,7 @@ except ImportError as e:
 DEFAULT_EMBED_MODEL = "sentence-transformers/msmarco-distilbert-base-v4"
 DEFAULT_COLLECTION_NAME = "networking_context"
 DEFAULT_PERSIST_DIR = Path("chroma_db")
-DEFAULT_SOURCE_DIR = Path("data/docs/pdfs")
+DEFAULT_SOURCE_DIR = Path("pdfs")
 TOKEN_STRIDE = 200
 CHUNK_SIZE = 800
 BATCH_SIZE = 64
