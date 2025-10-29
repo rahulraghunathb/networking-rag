@@ -2,11 +2,6 @@
 Quiz Mode API - Handles quiz generation and answer checking with web citations
 """
 from __future__ import annotations
-import logging
-
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 from pathlib import Path
 import random
@@ -32,7 +27,7 @@ PERSIST_DIR = Path("chroma_db")
 COLLECTION_NAME = "networking_context"
 EMBED_MODEL_NAME = "sentence-transformers/msmarco-distilbert-base-v4"
 OLLAMA_MODEL = None
-QUIZ_TOP_K = 8
+QUIZ_TOP_K = 12
 MIN_QUESTIONS = 1
 MAX_QUESTIONS = 10
 WEB_SEARCH_TIMEOUT = 10
@@ -79,7 +74,7 @@ class WebCitation(BaseModel):
 
 class QuizRequest(BaseModel):
     topic: Optional[str] = None
-    question_type: str = 'random'
+    question_type: str = 'multiple_choice'
     count: int = 1
 
 
@@ -124,9 +119,8 @@ _quiz_cache: Dict[str, Dict[str, any]] = {}
 def _load_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        logger.info(f"Loading embedding model: {EMBED_MODEL_NAME}")
+        print(f"Loading embedding model: {EMBED_MODEL_NAME}")
         _model = SentenceTransformer(EMBED_MODEL_NAME, device="cpu")
-        logger.info("Embedding model loaded successfully")
     return _model
 
 
@@ -143,12 +137,9 @@ def _check_ollama_health() -> bool:
     try:
         client = _load_ollama_client()
         model_name = _get_ollama_model()
-        logger.info(f"Checking Ollama health for model: {model_name}")
         client.show(model_name)
-        logger.info("Ollama health check passed")
         return True
     except Exception as e:
-        logger.error(f"Ollama health check failed: {e}")
         global _ollama_client
         _ollama_client = None
         return False
@@ -167,24 +158,24 @@ def _load_collection() -> chromadb.Collection:
     """Load the chroma collection for context retrieval."""
     global _collection
     if _collection is None:
-        logger.info(f"Loading chroma collection: {COLLECTION_NAME} from {PERSIST_DIR}")
+        print(f"Loading chroma collection: {COLLECTION_NAME} from {PERSIST_DIR}")
         client = chromadb.PersistentClient(path=str(PERSIST_DIR), settings=Settings(anonymized_telemetry=False))
         _collection = client.get_collection(COLLECTION_NAME)
-        logger.info("Chroma collection loaded successfully")
+        print("ChromaDB collection loaded successfully")
     return _collection
 
 
 def _embed_query(text: str) -> List[float]:
-    logger.debug(f"Generating embedding for text: {text[:100]}...")
+    print(f"Generating embedding for text: {text[:100]}...")
     model = _load_model()
     vec = model.encode([text], convert_to_numpy=False, normalize_embeddings=True)
     embedding = vec[0].tolist()
-    logger.debug(f"Generated embedding of length: {len(embedding)}")
+    print(f"Generated embedding of length: {len(embedding)}")
     return embedding
 
 
 def _fetch_context(query_embedding: List[float], top_k: int) -> List[ContextItem]:
-    logger.info(f"Fetching context from vector database, top_k={top_k}")
+    print(f"Fetching context from vector database, top_k={top_k}")
     collection = _load_collection()
     try:
         results = collection.query(
@@ -195,7 +186,7 @@ def _fetch_context(query_embedding: List[float], top_k: int) -> List[ContextItem
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
 
-        logger.info(f"Retrieved {len(documents)} documents from vector database")
+        print(f"Retrieved {len(documents)} documents from vector database")
         
         items: List[ContextItem] = []
         for idx, (doc, meta) in enumerate(zip(documents, metadatas), start=1):
@@ -203,11 +194,11 @@ def _fetch_context(query_embedding: List[float], top_k: int) -> List[ContextItem
             page = meta.get("page") if isinstance(meta, dict) else None
             text = (doc or "").strip()
             items.append(ContextItem(rank=idx, source=source, page=page, text=text))
-            logger.debug(f"Context {idx}: source={source}, page={page}, text_length={len(text)}")
+            print(f"Context {idx}: source={source}, page={page}, text_length={len(text)}")
         
         return items
     except Exception as e:
-        logger.error(f"Error fetching context from vector database: {e}")
+        print(f"Error fetching context from vector database: {e}")
         raise
 
 
@@ -251,16 +242,14 @@ async def _search_web(query: str, max_results: int = 3) -> List[WebCitation]:
 
 def _llm_generate_question(context_text: str, question_type: str, topic: str) -> Dict[str, any]:
     """Use Ollama to generate intelligent quiz questions based on context."""
-    logger.info(f"Generating question using LLM for topic: {topic}, type: {question_type}")
+    print(f"Generating question using LLM for topic: {topic}, type: {question_type}")
     if not _check_ollama_health():
         raise HTTPException(status_code=503, detail="Ollama service is not available. Please ensure Ollama is running and the model is loaded.")
     
     client = _load_ollama_client()
     model_name = _get_ollama_model()
-    logger.debug(f"Loaded Ollama client and model: {model_name}")
     
     prompt = _get_prompt_for_type(question_type, topic, context_text)
-    logger.debug(f"Generated prompt for LLM: {prompt[:100]}")
     
     try:
         response = client.chat(
@@ -268,10 +257,9 @@ def _llm_generate_question(context_text: str, question_type: str, topic: str) ->
             messages=[{"role": "user", "content": prompt}],
             options={"temperature": 0.7, "num_predict": 500}
         )
-        logger.info("LLM response received")
+        print("LLM response received")
         
         result_text = response["message"]["content"].strip()
-        logger.debug(f"LLM response text: {result_text[:100]}")
         
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
@@ -320,30 +308,27 @@ def _fallback_question_generation(context_text: str, question_type: str, topic: 
 
 def _generate_question_from_context(contexts: List[ContextItem], question_type: str, topic: Optional[str] = None) -> QuizQuestion:
     """Generate a quiz question using LLM or raise error if unavailable."""
-    logger.info(f"Generating question from context - type: {question_type}, topic: {topic}")
+    print(f"Generating question from context - type: {question_type}, topic: {topic}")
     
     if not contexts:
-        logger.warning("No contexts provided, using fallback context")
+        print("No contexts provided, using fallback context")
         contexts = [ContextItem(rank=1, source=None, page=None, text=f"Key facts about {topic or 'networking'}.")]
 
     # Combine all context texts for LLM
     context_text = "\n\n".join([f"[{c.rank}] {c.text}" for c in contexts if c.text])
-    logger.debug(f"Combined context length: {len(context_text)} characters")
     
     citations = [
         {"source": c.source or "context", "page": c.page, "rank": c.rank}
         for c in contexts[:3] if c.text and c.text.strip()
     ]
-    logger.debug(f"Generated {len(citations)} citations")
 
     question_id = str(uuid.uuid4())
     topic_label = (topic or "networking").title()
-    logger.info(f"Generating question ID: {question_id} for topic: {topic_label}")
 
     try:
         # Use LLM-powered question generation
         llm_result = _llm_generate_question(context_text, question_type, topic_label)
-        logger.info("LLM question generation successful")
+        print("LLM question generation successful")
         
         # Convert LLM result to QuizQuestion format
         if question_type == 'multiple_choice':
@@ -377,11 +362,11 @@ def _generate_question_from_context(contexts: List[ContextItem], question_type: 
                 citations=citations
             )
         
-        logger.info(f"Successfully generated question: {question.id}")
+        print(f"Successfully generated question: {question.id}")
         return question
         
     except Exception as e:
-        logger.error(f"Error generating question: {e}")
+        print(f"Error generating question: {e}")
         raise
 
 
@@ -428,7 +413,6 @@ Provide only ONE grade (A, B, C, D, or F), not multiple options. Be specific in 
         )
         
         result_text = response["message"]["content"].strip()
-        logger.debug(f"LLM grading response: {result_text[:200]}...")
         
         json_match = re.search(r'\{.*\}', result_text, re.DOTALL)
         if json_match:
@@ -443,11 +427,11 @@ Provide only ONE grade (A, B, C, D, or F), not multiple options. Be specific in 
                 
             return is_correct, grade, confidence
         else:
-            logger.warning("No valid JSON in LLM grading response")
+            print("No valid JSON in LLM grading response")
             return False, 'C', 0.5
         
     except Exception as e:
-        logger.error(f"LLM answer grading failed: {e}")
+        print(f"LLM answer grading failed: {e}")
         return False, 'C', 0.0
 
 
@@ -533,40 +517,33 @@ async def _get_web_citations_for_feedback(question: str, topic: str) -> List[Web
 
 def generate_quiz(topic: Optional[str], question_type: str, count: int) -> QuizResponse:
     """Generate quiz questions - randomly or topic-specific."""
-    logger.info(f"=== STARTING QUIZ GENERATION ===")
-    logger.info(f"Parameters: topic={topic}, question_type={question_type}, count={count}")
+    print(f"=== STARTING QUIZ GENERATION ===")
+    print(f"Parameters: topic={topic}, question_type={question_type}, count={count}")
     
     try:
         # If no topic provided, randomly select from hardcoded topics
         if not topic or not topic.strip():
             topic_query = random.choice(HARDCODED_TOPICS)
-            logger.info(f"No topic provided, selected random topic: {topic_query}")
+            print(f"No topic provided, selected random topic: {topic_query}")
         else:
             topic_query = topic.strip()
-            logger.info(f"Using provided topic: {topic_query}")
-
-        logger.info("Generating embedding for topic query...")
         query_embedding = _embed_query(topic_query)
-        
-        logger.info("Fetching context from vector database...")
         contexts = _fetch_context(query_embedding, QUIZ_TOP_K)
 
         if not contexts:
-            logger.error("No context found for quiz generation")
+            print("No context found for quiz generation")
             raise HTTPException(status_code=404, detail="No context for quiz generation")
 
-        logger.info(f"Found {len(contexts)} context items")
+        print(f"Found {len(contexts)} context items")
 
         questions = []
         num_questions = max(MIN_QUESTIONS, min(count, MAX_QUESTIONS))
-        logger.info(f"Generating {num_questions} questions")
         
         for i in range(num_questions):
-            logger.info(f"=== Generating question {i+1}/{num_questions} ===")
+            print(f"=== Generating question {i+1}/{num_questions} ===")
             
             # Randomize question type if 'random' is selected
             q_type = question_type if question_type != 'random' else random.choice(['multiple_choice', 'true_false', 'open_ended'])
-            logger.info(f"Question type: {q_type}")
             
             # Generate question with randomization
             q = _generate_question_from_context(contexts, q_type, topic_query)
@@ -585,17 +562,16 @@ def generate_quiz(topic: Optional[str], question_type: str, count: int) -> QuizR
                 "context": context_text  # Store the context for grading
             }
             questions.append(q)
-            logger.info(f"Question {i+1} generated successfully: {q.id}")
 
-        logger.info(f"=== QUIZ GENERATION COMPLETE ===")
-        logger.info(f"Generated {len(questions)} questions successfully")
+        print(f"=== QUIZ GENERATION COMPLETE ===")
+        print(f"Generated {len(questions)} questions successfully")
         return QuizResponse(total_questions=len(questions), questions=questions)
         
     except HTTPException:
-        logger.error(f"HTTP Exception in quiz generation", exc_info=True)
+        print(f"HTTP Exception in quiz generation", exc_info=True)
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in quiz generation: {e}", exc_info=True)
+        print(f"Unexpected error in quiz generation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

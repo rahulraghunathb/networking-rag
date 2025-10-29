@@ -20,7 +20,7 @@ from sentence_transformers import SentenceTransformer
 PERSIST_DIR = Path("chroma_db")
 COLLECTION_NAME = "networking_context"
 EMBED_MODEL_NAME = "sentence-transformers/msmarco-distilbert-base-v4"
-DEFAULT_TOP_K = 4
+DEFAULT_TOP_K = 6
 OLLAMA_MODEL = None
 
 
