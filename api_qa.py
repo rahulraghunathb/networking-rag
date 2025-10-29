@@ -11,7 +11,7 @@ import chromadb
 from chromadb.config import Settings
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
-from openai import OpenAI
+from ollama import Client
 from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 
@@ -21,6 +21,7 @@ PERSIST_DIR = Path("chroma_db")
 COLLECTION_NAME = "networking_context"
 EMBED_MODEL_NAME = "sentence-transformers/msmarco-distilbert-base-v4"
 DEFAULT_TOP_K = 4
+OLLAMA_MODEL = None
 
 
 # Pydantic Models
@@ -47,7 +48,7 @@ class AskResponse(BaseModel):
 # Global instances
 _model: Optional[SentenceTransformer] = None
 _collection: Optional[chromadb.Collection] = None
-_openai_client: Optional[OpenAI] = None
+_ollama_client: Optional[Client] = None
 
 
 def _load_model() -> SentenceTransformer:
@@ -68,16 +69,36 @@ def _load_collection() -> chromadb.Collection:
     return _collection
 
 
-def _load_openai_client() -> OpenAI:
-    global _openai_client
-    if _openai_client is None:
+def _get_ollama_model() -> str:
+    global OLLAMA_MODEL
+    if OLLAMA_MODEL is None:
         load_dotenv()
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set")
-        _openai_client = OpenAI(api_key=api_key)
-    return _openai_client
+        OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:1b")
+    return OLLAMA_MODEL
 
+
+def _load_ollama_client() -> Client:
+    global _ollama_client
+    if _ollama_client is None:
+        load_dotenv()
+        host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        _ollama_client = Client(host=host)
+    return _ollama_client
+
+def _check_ollama_health() -> bool:
+    """Check if Ollama is running and the model is available."""
+    try:
+        load_dotenv()
+        host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        client = Client(host=host)
+        model_name = _get_ollama_model()
+        client.show(model_name)
+        return True
+    except Exception as e:
+        print(f"Ollama health check failed: {e}")
+        global _ollama_client
+        _ollama_client = None
+        return False
 
 def _embed_query(text: str) -> List[float]:
     model = _load_model()
@@ -104,8 +125,12 @@ def _fetch_context(query_embedding: List[float], top_k: int) -> List[ContextItem
     return items
 
 
-def _summarize_with_openai(question: str, contexts: List[ContextItem]) -> str:
-    client = _load_openai_client()
+def _summarize_with_ollama(question: str, contexts: List[ContextItem]) -> str:
+    if not _check_ollama_health():
+        raise HTTPException(status_code=503, detail="Ollama service is not available. Please ensure Ollama is running and the model is loaded.")
+    
+    client = _load_ollama_client()
+    model_name = _get_ollama_model()
     context_text = "\n\n".join(
         [f"[{c.rank}] Source: {c.source or 'unknown'}{(' · p' + str(c.page)) if c.page else ''}\n{c.text}" for c in contexts]
     )
@@ -123,13 +148,12 @@ def _summarize_with_openai(question: str, contexts: List[ContextItem]) -> str:
             "content": f"Context:\n{context_text}\n\nQuestion: {question}",
         },
     ]
-    resp = client.chat.completions.create(
-        model="gpt-4o-mini",
+    response = client.chat(
+        model=model_name,
         messages=messages,
-        max_tokens=1000,
-        temperature=0.7
+        options={"num_predict": 1000, "temperature": 0.7}
     )
-    return resp.choices[0].message.content.strip()
+    return response["message"]["content"].strip()
 
 
 def ask_question(question: str, top_k: int = DEFAULT_TOP_K) -> AskResponse:
@@ -141,7 +165,7 @@ def ask_question(question: str, top_k: int = DEFAULT_TOP_K) -> AskResponse:
     try:
         q_emb = _embed_query(q)
         contexts = _fetch_context(q_emb, top_k)
-        answer = _summarize_with_openai(q, contexts)
+        answer = _summarize_with_ollama(q, contexts)
 
         citations = [
             {"index": c.rank, "source": c.source, "page": c.page}

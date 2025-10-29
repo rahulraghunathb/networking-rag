@@ -1,199 +1,261 @@
 # Networking RAG System
 
-Professional Q&A system for networking topics using:
+Professional Q&A and Quiz system for networking topics using:
 
 - **Retrieval**: HuggingFace SentenceTransformers (msmarco-distilbert-base-v4)
 - **Vector Store**: ChromaDB
-- **Generation**: OpenAI GPT-5 Nano
+- **Generation**: Ollama with Gemma3:1b (local LLM)
 - **API**: FastAPI with structured output
 - **UI**: Modern chat interface
 
-## Quick Start
+## 🚀 Quick Setup
 
-1. Activate virtual environment:
-
-```bash
-source .venv/bin/activate  # On Linux/Mac
-# or
-.venv\Scripts\activate  # On Windows
-```
-
-2. Install requirements:
+### 1. Environment Setup
 
 ```bash
-pip install fastapi uvicorn chromadb sentence-transformers openai python-dotenv pypdf
+# Create virtual environment
+python -m venv .rag
+
+# Activate virtual environment
+# On Windows:
+.rag\Scripts\activate
+# On Linux/Mac:
+source .rag/bin/activate
 ```
 
-3. Set OpenAI key in `.env`:
-
-```
-OPENAI_API_KEY=your_key
-```
-
-4. Build the knowledge base (run once or when adding new PDFs):
+### 2. Install Dependencies
 
 ```bash
+pip install -r requirements.txt
+```
+
+### 3. Install Ollama
+
+Download and install Ollama from [ollama.com](https://ollama.com/download)
+
+### 4. Pull the Gemma3 Model
+
+```bash
+# Pull the Gemma3 1B model
+ollama pull gemma3:1b
+
+# Optional: Start Ollama service (runs automatically on first use)
+ollama serve
+```
+
+### 5. Prepare Data & Build Vector Database
+
+The system comes with pre-loaded networking PDFs. Build the vector database:
+
+```bash
+# Navigate to the embeddings directory
+cd generate_embeddings
+
+# Run the ingestion script
 python ingest_hf.py
 ```
 
-5. Run API (includes web UI):
+This will:
+
+- Process PDFs from the `../pdfs/` directory
+- Create embeddings using SentenceTransformers
+- Store vectors in ChromaDB for fast retrieval
+
+### 6. Configure Environment (Optional)
+
+Create a `.env` file in the root directory:
 
 ```bash
-python api_hf.py
+# Ollama configuration (optional - defaults shown)
+OLLAMA_HOST=http://localhost:11434
+OLLAMA_MODEL=gemma3:1b
 ```
 
-6. Open UI: http://localhost:8000
-
-## Key Files to Run
-
-- **ingest_hf.py**: Run to build/update the ChromaDB vector store from PDFs
-- **api_hf.py**: Run to start the FastAPI server and serve the web UI
-
-## Dependencies
-
-- FastAPI: Web framework
-- Uvicorn: ASGI server
-- ChromaDB: Vector database
-- SentenceTransformers: HuggingFace embeddings
-- OpenAI: GPT-5 Nano for summarization
-- Python-dotenv: Environment variables
-- PyPDF: PDF processing
-
-## Key Files
-
-- `api_main.py`: Main FastAPI server (entry point)
-- `api_qa.py`: Q&A mode logic (question answering with context)
-- `api_quiz.py`: Quiz mode logic (quiz generation and checking)
-- `ingest_hf.py`: Build ChromaDB from PDFs
-- `static/`: Frontend assets (CSS/JS)
-- `templates/`: HTML UI
-
-### Architecture
-
-The application is now modularized:
-- **api_main.py**: FastAPI app with endpoints
-- **api_qa.py**: Handles Q&A mode with RAG
-- **api_quiz.py**: Handles quiz generation with 20 hardcoded topics from the vector database
-
-## Features
-
-- **Q&A Mode**: Contextual answers with citations from the database
-- **Enhanced Quiz Mode**: Interactive quizzes with multiple-choice, true/false, and open-ended questions
-- **Question Generation**: Random or topic-specific questions pulled from the database with enhanced variety
-- **Web Citations**: Additional references and citations from the internet for quiz feedback
-- **Advanced Grading**: Confidence-based scoring with similarity analysis for open-ended questions
-- **Modern UI**: Responsive design with animations and source tracking
-
-## Usage
-
-1. Add PDFs to `data/docs/pdfs`
-2. Build index:
+### 7. Run the Application
 
 ```bash
-python ingest_hf.py
+# Return to root directory
+cd ..
+
+# Start the FastAPI server
+python main.py
 ```
 
-3. Start API server:
+### 8. Access the Web Interface
 
-```bash
-python api_main.py
+Open your browser and go to: **http://localhost:8000**
+
+## 📋 System Requirements
+
+- **Python**: 3.8+
+- **Ollama**: Latest version
+- **RAM**: 4GB+ recommended (for Gemma3:1b model)
+- **Storage**: ~850MB for model + vector database
+
+## 🔧 Key Files & Structure
+
+```
+├── main.py                 # FastAPI application entry point
+├── api_qa.py              # Q&A mode with Ollama integration
+├── api_quiz.py            # Quiz generation and checking
+├── generate_embeddings/
+│   ├── ingest_hf.py       # Build vector database from PDFs
+│   └── query_hf.py        # Test embeddings (optional)
+├── chroma_db/             # Vector database storage
+├── pdfs/                  # Source PDF documents
+├── static/                # Frontend assets (CSS/JS)
+├── templates/             # HTML UI templates
+├── requirements.txt       # Python dependencies
+└── .env                   # Environment configuration
 ```
 
-4. Access UI: http://localhost:8000
+## 🎯 Features
 
 ### Q&A Mode
 
-- Type questions in the input box
-- Get answers with citations from the database
-- Use example buttons for quick testing
+- Ask questions about networking topics
+- Get contextual answers with citations
+- Powered by local Gemma3:1b model
+- Real-time response generation
 
-### Enhanced Quiz Mode
+### Quiz Mode
 
-1. Click "Quiz Mode" button in the header
-2. Choose generation type:
-   - **Random Questions**: Automatically selects from 20 hardcoded topics
-   - **Topic-Specific Questions**: Select from dropdown of 20 networking topics
-3. Select question type (Random, Multiple Choice Only, True/False Only, Open-Ended Only)
-4. Set the number of questions (1-10)
-5. Click "Generate Quiz" to get questions
-6. Answer the questions and submit
-7. View comprehensive feedback with:
-   - Confidence-based grading (A-F scale)
-   - Detailed explanations
-   - Database citations from the knowledge base
-   - Web citations from additional online sources
-   - Similarity scoring for open-ended questions
+- Interactive quizzes with multiple question types
+- 20 pre-configured networking topics
+- Multiple choice, true/false, and open-ended questions
+- Web citations for additional context
+- Confidence-based grading system
 
-**Hardcoded Topics** (20 total):
-- Firewalls, DNS, TCP/IP Protocol, Network Security, Encryption/SSL/TLS
-- VPN, DDoS Attacks, HTTP/HTTPS, Network Routing, OSI Model
-- IP Addressing, Network Authentication, Wireless Security, IDS
-- Load Balancing, Network Protocols, Packet Switching, Network Topology
-- Cybersecurity Threats, Email Security
+## 📚 Available Topics
 
-## Enhanced Quiz Examples
+- Firewalls
+- DNS (Domain Name System)
+- TCP/IP Protocol
+- Network Security
+- Encryption and SSL/TLS
+- VPN (Virtual Private Network)
+- DDoS Attacks
+- HTTP and HTTPS
+- Network Routing
+- OSI Model
+- IP Addressing and Subnetting
+- Network Authentication
+- Wireless Security (WPA/WPA2)
+- Intrusion Detection Systems (IDS)
+- Load Balancing
+- Network Protocols
+- Packet Switching
+- Network Topology
+- Cybersecurity Threats
+- Email Security (SMTP, POP3, IMAP)
 
-### Multiple Choice Questions
-- **Beginner**: "What is the main purpose of TCP/IP in network communication?"
-- **Intermediate**: "Which statement best describes how firewalls protect networks?"
-- **Advanced**: "What are the implementation considerations for VPN security protocols?"
+## 🔍 Health Check
 
-### True/False Questions
-- **Beginner**: "True or False: HTTP is a secure protocol for data transmission."
-- **Intermediate**: "True or False: DNS translates domain names to IP addresses."
-- **Advanced**: "True or False: SSL certificates ensure end-to-end encryption."
+Check system status at: **http://localhost:8000/health**
 
-### Open-Ended Questions
-- **Beginner**: "What is a firewall and why is it important?"
-- **Intermediate**: "Explain how encryption contributes to network security."
-- **Advanced**: "Describe the technical mechanisms behind DDoS attack mitigation."
+Returns status of:
 
-Questions are generated using enhanced algorithms with:
-- Category-based question templates
-- Context-aware distractors
-- Difficulty-based complexity
-- Comprehensive feedback with web citations
+- Vector database connectivity
+- Embedding model loading
+- Ollama service availability
 
-## System Architecture
+## 🛠 Troubleshooting
+
+### Ollama Issues
+
+```bash
+# Check if Ollama is running
+ollama list
+
+# Stop running models
+ollama stop gemma3:1b
+
+# Restart Ollama service
+ollama serve
+
+# Check model availability
+ollama show gemma3:1b
+```
+
+### Vector Database Issues
+
+```bash
+# Rebuild vector database
+cd generate_embeddings
+python ingest_hf.py
+```
+
+### Port Conflicts
+
+If port 8000 is busy, modify the port in `main.py`:
+
+```python
+uvicorn.run("main:app", host="127.0.0.1", port=8001, reload=True)
+```
+
+## 🏗 Architecture
 
 ```mermaid
 graph TD
-    A[User Query] --> B[API (FastAPI)]
-    B --> C[HF Embeddings]
-    C --> D[ChromaDB Retrieval]
-    D --> E[Context Extraction]
-    E --> F[OpenAI GPT-5 Nano]
-    F --> G[Generate Answer]
-    G --> H[Return Response with Citations]
+    A[User Query] --> B[FastAPI Server]
+    B --> C[SentenceTransformers]
+    C --> D[ChromaDB Vector Search]
+    D --> E[Context Retrieval]
+    E --> F[Ollama Gemma3:1b]
+    F --> G[Generate Response]
+    G --> H[Return with Citations]
     H --> I[Web UI Display]
 ```
 
-### Flow Description
+### Data Flow
 
-1. **User Query**: Input via web UI or API
-2. **HF Embeddings**: Convert query to vector using SentenceTransformers
-3. **ChromaDB Retrieval**: Find top-k similar chunks
-4. **Context Extraction**: Gather relevant text and metadata
-5. **OpenAI GPT-5 Nano**: Summarize context into coherent answer
-6. **Response**: JSON with answer, citations, and sources
-7. **UI Display**: Render in modern chat interface
+1. **Query Processing**: User input → embedding → vector search
+2. **Context Retrieval**: Top-K similar chunks from ChromaDB
+3. **Generation**: Ollama processes context + query → coherent answer
+4. **Response**: Structured output with citations and sources
 
-## How We Built It (Step-by-Step)
+## 📖 Usage Examples
 
-1. **Setup Project Structure**
+### Q&A Examples
 
-   - Created directories: `data/docs/pdfs`, `static/`, `templates/`
-   - Set up virtual environment and installed dependencies
+- "What is TCP/IP and how does it work?"
+- "Explain the difference between HTTP and HTTPS"
+- "How do firewalls protect networks?"
+- "What are the main components of the OSI model?"
 
-2. **Data Ingestion (ingest_hf.py)**
+### Quiz Examples
 
-   - Used PyPDF2 to read PDFs from `data/docs/pdfs`
-   - Chunked text into 800-token segments with 200-token stride
-   - Generated embeddings with HuggingFace SentenceTransformers
-   - Stored in ChromaDB collection `networking_context`
+- Multiple Choice: "What is the primary function of DNS?"
+- True/False: "TCP guarantees delivery of packets"
+- Open-Ended: "Explain how VPNs provide security"
 
-3. **API Development (api_hf.py)**
-   - Built FastAPI server with endpoints: `/`, `/health`, `/ask`
-   - Integrated retrieval: Embed query → Search ChromaDB → Get contexts
-   - Added OpenAI summarization for answers
-   - Included CORS for cross-origin requests
+## 🔧 Development
+
+### Adding New PDFs
+
+1. Place PDF files in the `pdfs/` directory
+2. Run `python generate_embeddings/ingest_hf.py` to rebuild the database
+3. Restart the application
+
+### Customizing the Model
+
+Edit `.env` file:
+
+```bash
+OLLAMA_MODEL=your-preferred-model
+```
+
+### Testing the Embeddings
+
+```bash
+cd generate_embeddings
+python query_hf.py
+```
+
+## 📄 License
+
+This project is open source. Feel free to modify and distribute.
+
+---
+
+**Ready to explore networking concepts with AI-powered assistance! 🤖📡**

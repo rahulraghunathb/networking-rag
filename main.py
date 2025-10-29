@@ -11,14 +11,15 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-
+import os
 # Import Q&A module
 from api_qa import (
     AskRequest,
     AskResponse,
     ask_question,
     _load_model,
-    _load_collection
+    _load_collection,
+    _check_ollama_health
 )
 
 # Import Quiz module
@@ -31,6 +32,15 @@ from api_quiz import (
     check_quiz_answer,
     get_hardcoded_topics
 )
+
+# Check Ollama status at startup
+ollama_status = _check_ollama_health()
+print(f"Starting Networking RAG System...")
+print(f"Loading Ollama model === {os.getenv('OLLAMA_MODEL')}")
+print(f"Ollama Model Status: {'RUNNING' if ollama_status else 'NOT AVAILABLE'}")
+print(f"Vector Database: LOADED")
+print(f"Server will start on http://127.0.0.1:8000")
+print("=" * 50)
 
 
 # Initialize FastAPI app
@@ -52,7 +62,13 @@ def health():
     try:
         _load_model()
         _load_collection()
-        return {"status": "ok"}
+        ollama_ok = _check_ollama_health()
+        return {
+            "status": "ok" if ollama_ok else "warning", 
+            "ollama": "ok" if ollama_ok else "not available",
+            "embedding_model": "ok",
+            "vector_db": "ok"
+        }
     except Exception as e:
         return {"status": "error", "detail": str(e)}
 

@@ -127,23 +127,50 @@ function renderQuizQuestions(questions) {
     const qDiv = document.createElement("div")
     qDiv.className = "quiz-question"
     qDiv.setAttribute("data-qid", q.id)
-    qDiv.innerHTML = `
-      <h4>${index + 1}. ${q.question}</h4>
-      ${
-        q.options
-          ? `<div class="quiz-options">
-              ${q.options
-                .map(
-                  (opt) =>
-                    `<button class="quiz-option" data-answer="${opt}" data-qid="${q.id}">${opt}</button>`
-                )
-                .join("")}
-            </div>`
-          : `<textarea class="quiz-textarea" data-qid="${q.id}" placeholder="Your answer..."></textarea>`
-      }
-      <button class="btn submit-answer" data-qid="${q.id}">Submit Answer</button>
-      <div class="quiz-feedback-inline hidden" id="feedback-${q.id}"></div>
-    `
+    
+    // Create question header
+    const questionHeader = document.createElement("h4")
+    questionHeader.textContent = `${index + 1}. ${q.question}`
+    qDiv.appendChild(questionHeader)
+    
+    // Create options container
+    if (q.options && q.options.length > 0) {
+      const optionsDiv = document.createElement("div")
+      optionsDiv.className = "quiz-options"
+      
+      // Add each option as a button
+      q.options.forEach(opt => {
+        const optionBtn = document.createElement("button")
+        optionBtn.className = "quiz-option"
+        optionBtn.setAttribute("data-answer", opt)
+        optionBtn.setAttribute("data-qid", q.id)
+        optionBtn.textContent = opt
+        optionsDiv.appendChild(optionBtn)
+      })
+      
+      qDiv.appendChild(optionsDiv)
+    } else {
+      // For open-ended questions
+      const textarea = document.createElement("textarea")
+      textarea.className = "quiz-textarea"
+      textarea.setAttribute("data-qid", q.id)
+      textarea.setAttribute("placeholder", "Your answer...")
+      qDiv.appendChild(textarea)
+    }
+    
+    // Add submit button
+    const submitBtn = document.createElement("button")
+    submitBtn.className = "btn submit-answer"
+    submitBtn.setAttribute("data-qid", q.id)
+    submitBtn.textContent = "Submit Answer"
+    qDiv.appendChild(submitBtn)
+    
+    // Add feedback container
+    const feedbackDiv = document.createElement("div")
+    feedbackDiv.className = "quiz-feedback-inline hidden"
+    feedbackDiv.id = `feedback-${q.id}`
+    qDiv.appendChild(feedbackDiv)
+    
     quizQuestionsEl.appendChild(qDiv)
   })
 }

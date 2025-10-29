@@ -41,14 +41,54 @@
       <div id="examples" class="examples">
         <h3>Try these examples:</h3>
         <div class="example-buttons">
-          <button class="example-btn" data-question="What is a DDoS attack and how can it be mitigated?">DDoS Attacks</button>
-          <button class="example-btn" data-question="Explain the TCP/IP protocol stack in detail.">TCP/IP Stack</button>
-          <button class="example-btn" data-question="What are the key differences between IPv4 and IPv6?">IPv4 vs IPv6</button>
-          <button class="example-btn" data-question="How does encryption work in network security?">Encryption</button>
-          <button class="example-btn" data-question="Describe the OSI model layers and their functions.">OSI Model</button>
-          <button class="example-btn" data-question="What is the role of firewalls in network protection?">Firewalls</button>
-          <button class="example-btn" data-question="Explain how VPNs ensure secure communication.">VPNs</button>
-          <button class="example-btn" data-question="What are common vulnerabilities in wireless networks?">Wireless Security</button>
+          <button
+            class="example-btn"
+            data-question="What is a DDoS attack and how can it be mitigated?"
+          >
+            DDoS Attacks
+          </button>
+          <button
+            class="example-btn"
+            data-question="Explain the TCP/IP protocol stack in detail."
+          >
+            TCP/IP Stack
+          </button>
+          <button
+            class="example-btn"
+            data-question="What are the key differences between IPv4 and IPv6?"
+          >
+            IPv4 vs IPv6
+          </button>
+          <button
+            class="example-btn"
+            data-question="How does encryption work in network security?"
+          >
+            Encryption
+          </button>
+          <button
+            class="example-btn"
+            data-question="Describe the OSI model layers and their functions."
+          >
+            OSI Model
+          </button>
+          <button
+            class="example-btn"
+            data-question="What is the role of firewalls in network protection?"
+          >
+            Firewalls
+          </button>
+          <button
+            class="example-btn"
+            data-question="Explain how VPNs ensure secure communication."
+          >
+            VPNs
+          </button>
+          <button
+            class="example-btn"
+            data-question="What are common vulnerabilities in wireless networks?"
+          >
+            Wireless Security
+          </button>
         </div>
       </div>
       <div id="chat-container" class="chat-container">
@@ -61,13 +101,18 @@
             <div class="spinner"></div>
             <span>Generating quiz...</span>
           </div>
-          
+
           <!-- Question Generation Type Toggle -->
           <div class="quiz-section">
             <label class="quiz-label">Question Generation Type:</label>
             <div class="toggle-group">
               <label class="toggle-option">
-                <input type="radio" name="generation-type" value="random" checked />
+                <input
+                  type="radio"
+                  name="generation-type"
+                  value="random"
+                  checked
+                />
                 <span>Random Questions</span>
               </label>
               <label class="toggle-option">
@@ -78,7 +123,7 @@
           </div>
 
           <!-- Topic Selection (hidden by default) -->
-          <div class="quiz-section" id="topic-section" style="display: none;">
+          <div class="quiz-section" id="topic-section" style="display: none">
             <label class="quiz-label" for="quiz-topic">Select Topic:</label>
             <select id="quiz-topic" class="quiz-select">
               <option value="">Loading topics...</option>
@@ -98,11 +143,35 @@
 
           <!-- Number of Questions -->
           <div class="quiz-section">
-            <label class="quiz-label" for="quiz-count">Number of Questions:</label>
-            <input id="quiz-count" class="quiz-input" type="number" min="1" max="10" value="3" />
+            <label class="quiz-label" for="quiz-count"
+              >Number of Questions:</label
+            >
+            <input
+              id="quiz-count"
+              class="quiz-input"
+              type="number"
+              min="1"
+              max="10"
+              value="3"
+            />
           </div>
 
-          <button id="generate-quiz" class="btn">Generate Quiz</button>
+          <div style="text-align: center; margin-top: 0.5rem">
+            <button
+              id="generate-quiz"
+              class="btn"
+              style="
+                padding: 4px 8px;
+                font-size: 0.8rem;
+                min-width: 80px;
+                max-width: 450px;
+                border-radius: 16px;
+                width: auto;
+              "
+            >
+              Generate Questions
+            </button>
+          </div>
         </div>
         <div id="quiz-questions" class="quiz-questions"></div>
         <div id="quiz-feedback" class="quiz-feedback hidden"></div>
